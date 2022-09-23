@@ -1,0 +1,225 @@
+<!--
+PTZOptics Web Preset Recalls
+ptzoptics-web-preset-recalls.html
+Copyright (c) 2022 by Carl David Brubaker
+All Rights Reserved
+
+Recalls stored PTZOptics camera scenes over http.
+-->
+
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<title>PTZoptics Scene Presets</title>
+		<meta name="viewport"
+					content="width=device-width, initial-scale=1">
+		<script>
+			// ############################################################
+			// PTZoptics Web Control Settings
+			// ############################################################
+			/**
+			 * Replace IP address with your camera address
+			 * ex: `192.168.1.15`
+			 */
+			const cameraIP = `10.1.10.287`;
+
+			/**
+			 * Scenes that are enabled on page load.
+			 * List the stored preset numbers separated by commas.
+			 * ex: [1, 2, 3]
+			 */
+			const defaultSceneList = [23];
+
+			/* Default Preset
+					{
+							name: "",
+							preset: ,
+							image: ""
+					},
+			*/
+			/**
+			 * Enter all of the stored camera presets here.
+			 * name: Whatever you want to call your scene.
+			 * preset: The camera preset number to recall.
+			 * image: Name of the image related to the scene.
+			 * 
+			 * ex:
+			 * {
+			 *   name: "My Scene",
+			 *   preset: 23,
+			 *   image: "my-scene.png"
+			 * }
+			 */
+			const cameraScenes = [
+				{
+					name: "My Scene 1",
+					preset: 23,
+					image: "my-scene-1.png"
+				},
+				{
+					name: "My Scene 2",
+					preset: 13,
+					image: "my-scene-2.png"
+				},
+			];
+		</script>
+		<style>
+			a {
+				color: #aaa;
+				display: none;
+				margin: 0;
+				padding: 0;
+				text-decoration: none;
+			}
+
+			a.show {
+				display: block;
+			}
+
+			body {
+				background-color: #111;
+				color: #aaa;
+				margin: 0 auto;
+			}
+
+			h1 {
+				text-align: center;
+			}
+
+			h2 {
+				text-align: center;
+			}
+
+			#ptz-presets {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: space-evenly;
+			}
+
+			#all-presets {
+				margin: 2rem auto;
+				max-width: 20rem;
+			}
+
+			.activeScene {
+				background-color: #333;
+			}
+
+			.cameraScene {
+				padding: 7px;
+			}
+
+			.cameraScene h2 {
+				margin: 0;
+				padding-bottom: 7px;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<h1>PTZoptics Camera Presets</h1>
+		<h2>Current Scene: <span id="currentScene">None</span></h2>
+		<main>
+			<section id="ptz-presets"></section>
+			<section id="all-presets"></section>
+		</main>
+
+		<script>
+
+			function generateScenes() {
+				const ptzPresets = document.querySelector(`#ptz-presets`);
+
+				cameraScenes.forEach(scene => {
+					const anchor = document.createElement(`a`);
+					anchor.id = `id-${scene.preset}`;
+					anchor.href = `http://${cameraIP}/cgi-bin/ptzctrl.cgi?ptzcmd&poscall&${scene.preset}`;
+					anchor.innerHTML = `<div class="cameraScene">` +
+						`<h2>${scene.name}</h2>` +
+						`<img src="${scene.image}" width="300" height="168.75">` +
+						`</div>`;
+
+					// Add .show if preset is in the default list.
+					if (defaultSceneList.includes(scene.preset)) {
+						anchor.classList.add(`show`)
+					}
+					ptzPresets.append(anchor);
+				});
+			}
+
+			// Checkboxes to show available scenes.
+			function generateShowList() {
+				const allScenesDiv = document.querySelector(`#all-presets`);
+
+				cameraScenes.forEach(scene => {
+					const wrapper = document.createElement(`div`);
+					const checkbox = document.createElement(`input`);
+					checkbox.id = `checkbox-${scene.preset}`;
+					checkbox.type = `checkbox`;
+					checkbox.value = scene.preset;
+					checkbox.checked = (defaultSceneList.includes(scene.preset)) ? true : false;
+					const label = document.createElement(`label`);
+					label.setAttribute(`for`, `checkbox-${scene.preset}`);
+					label.innerHTML = scene.name;
+					wrapper.appendChild(checkbox);
+					wrapper.appendChild(label);
+					allScenesDiv.appendChild(wrapper);
+				});
+			}
+
+			generateScenes();
+			generateShowList();
+
+			document.addEventListener(`click`, (e) => {
+				console.log(`in listener`);
+
+				// Get all preset anchors
+				const ptzPresets = document.querySelector(`#ptz-presets`);
+
+				if (ptzPresets.contains(e.target)) {
+					e.preventDefault();
+
+					// find all presets
+					const presetAnchors = ptzPresets.querySelectorAll(`a`);
+
+					presetAnchors.forEach(preset => {
+						if (preset.contains(e.target)) {
+							// Create AJAX call to change camera preset
+							const ajaxCall = new XMLHttpRequest();
+							ajaxCall.open('GET', preset.href);
+							ajaxCall.send();
+
+							// Add class to update preset CSS
+							preset.classList.add(`activeScene`);
+
+							// Change current scene title to match preset
+							document.querySelector("#currentScene").innerHTML = preset.querySelector(`div h2`).innerHTML;
+						} else {
+							// remove active scene CSS
+							preset.classList.remove(`activeScene`);
+						}
+					});
+					return;
+				}
+
+				const allPresets = document.querySelector(`#all-presets`);
+
+				if (allPresets.contains(e.target)) {
+					const checkboxes = allPresets.querySelectorAll(`input[type="checkbox"]`);
+
+					checkboxes.forEach(checkbox => {
+						const preset = ptzPresets.querySelector(`#id-${checkbox.value}`);
+						if (checkbox.checked) {
+							preset.classList.add(`show`);
+						} else {
+							preset.classList.remove(`show`);
+						}
+					});
+				}
+			});
+		</script>
+	</body>
+
+</html>
